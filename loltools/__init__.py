@@ -1,53 +1,55 @@
 #
 class DamageReduction(object):
-    #amount of damage reduction points
-    def __set_amount(self, amount):
-        self.__amount = float(amount)
-        self.__damage_multiplier = 100.0 / (100.0 + self.__amount)
-    def __get_amount(self):
-        return self.__amount
-    amount = property(__get_amount, __set_amount)
-    
-    #percent of damage reduced
-    def __get_multiplier(self):
-        return self.__damage_multiplier
-    multiplier = property(__get_multiplier)
-    
     def __init__(self, amount):
-        self.__damage_multiplier = None
-        self.__amount = None
         self.amount = amount
-        
-    def mitigate(self, damage, defense_reduction=None):
+     
+    def effective_health(self, health):
+        if self.amount >= 0:
+            return health * (100.0 + self.amount) / 100.0
+        elif self.amount < 0:
+            return health * 100.0 / (100.0 + abs(self.amount))  
+                    
+    def mitigate(self, damage, defense_penetration=None):
         #returns damage actually dealt after applying the damage multiplier
-        orig_amount  = self.amount
-        if defense_reduction:
-            if defense_reduction.defense_reduction_percent:
-                self.amount -= (self.amount * defense_reduction.defense_reduction_percent)
-            if defense_reduction.defense_reduction:
-                self.amount -= defense_reduction.defense_reduction
-            if self.amount > 0 and defense_reduction.defense_pen_percent:
-                self.amount -= (self.amount * defense_reduction.defense_pen_percent)
+        amount = self.amount
+        if defense_penetration:
+            if defense_penetration.reduction_percent:
+                amount -= (amount * defense_penetration.reduction_percent)
+            if defense_penetration.reduction:
+                amount -= defense_penetration.reduction
+            if amount > 0 and defense_penetration.penetration_percent:
+                self.amount -= (amount * defense_penetration.penetration_percent)
                 if self.amount < 0:
                     self.amount = 0
-            if self.amount > 0 and defense_reduction.defense_pen:
-                self.amount -= defense_reduction.defense_pen
-                if self.amount < 0:
-                    self.amount = 0 
-        
-        final_damage = damage * self.multiplier
-        self.amount = orig_amount
-        return final_damage
+            if amount > 0 and defense_penetration.penetration:
+                amount -= defense_penetration.penetration
+                if amount < 0:
+                    amount = 0 
+
+        return damage * self.multiplier(amount)
     
     def apply_hit(self, hit):
-        return self.mitigate(hit.amount, hit)
+        return self.mitigate(hit.amount, hit.defense_penetration)
     
+    def multiplier(self, amount=None):
+        if amount is None:
+            amount = self.amount
+
+        if amount >= 0:
+            return 100.0 / (100.0 + amount)
+        elif amount < 0:
+            return 1.0 + abs(amount) / 100.0        
+    
+class DefensePenetration(object):
+    def __init__(self, reduction_percent=None, reduction=None, 
+                 penetration_percent=None, penetration=None):
+        self.reduction_percent = reduction_percent
+        self.reduction = reduction
+        self.penetration = penetration
+        self.penetration_percent = penetration_percent
+        
 class Hit(object):
-    def __init__(self, amount, defense_reduction_percent=None, defense_reduction=None, 
-                 defense_pen_percent=None, defense_pen=None):
+    def __init__(self, amount, defense_penetration=None):
         self.amount = amount
-        self.defense_reduction_percent = defense_reduction_percent
-        self.defense_reduction = defense_reduction
-        self.defense_pen_percent = defense_pen_percent
-        self.defense_pen = defense_pen
+        self.defense_penetration = defense_penetration
     

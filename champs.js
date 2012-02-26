@@ -1,4 +1,4 @@
-{
+championStats = {
   "Tristana": {
     "armor": "15 (+3)", 
     "magic res.": "30 (+0)", 
